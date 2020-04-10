@@ -10,9 +10,10 @@ const Course = (props) => {
 };
 
 const Part = (props) => {
+  const { name, exercises } = props;
   return (
     <>
-      {props.name} {props.exercises}
+      {name} {exercises}
     </>
   );
 };
