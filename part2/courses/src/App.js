@@ -1,6 +1,6 @@
 import React from "react";
 
-import CourseDetail from "./component/course";
+import CourseDetail from "./components/course";
 
 const App = () => {
   const courses = [
