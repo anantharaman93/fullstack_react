@@ -1,35 +1,67 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 
 import Persons from "./components/Persons";
 import PersonForm from "./components/PersonForm";
 import Filter from "./components/Filter";
+import Notification from "./components/Notification";
+
+import personService from "./services/person";
 
 const App = () => {
+  const [filterText, setFilterText] = useState("");
   const [persons, setPersons] = useState([]);
 
   const [newName, setNewName] = useState("");
   const [newNumber, setNewNumber] = useState("");
 
-  const [filterText, setFilterText] = useState("");
+  const [notification, setNotification] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    axios
-      .get("http://localhost:3001/persons")
-      .then((response) => setPersons(response.data));
+    personService.getAll().then((data) => setPersons(data));
   }, []);
 
   const addPerson = (event) => {
     event.preventDefault();
 
-    const check = persons.filter((p) => p.name === newName).length > 0;
+    const duplicatePersons = persons.filter((p) => p.name === newName);
 
-    if (check) {
-      window.alert(`${newName} is already added to phonebook`);
+    if (duplicatePersons.length > 0) {
+      const personToUpdate = duplicatePersons[0];
+      if (
+        window.confirm(
+          `${newName} is already added to phonebook, need to update ?`
+        )
+      ) {
+        const newPerson = { ...personToUpdate, number: newNumber };
+        personService.update(newPerson).then((createdPerson) => {
+          const personsToSet = persons.map((person) =>
+            person.id === createdPerson.id ? createdPerson : person
+          );
+          setPersons(personsToSet);
+          setNotification(
+            `Person update ${newName} updated with number ${newNumber}`
+          ).catch((err) => {
+            setErrorMessage(`Error while updating ${newName}`);
+          });
+        });
+      }
     } else {
-      const newPerson = persons.concat({ name: newName, number: newNumber });
-      setPersons(newPerson);
+      const newPerson = { name: newName, number: newNumber };
+
+      personService
+        .create(newPerson)
+        .then((createdPerson) => {
+          setPersons(persons.concat(createdPerson));
+          setNotification(
+            `Person ${newName} added with phone number ${newNumber}`
+          );
+        })
+        .catch((err) => {
+          setErrorMessage(`Error while creating person ${newName}`);
+        });
     }
+
     setNewName("");
     setNewNumber("");
   };
@@ -38,10 +70,17 @@ const App = () => {
     setFilterText(event.target.value);
   };
 
-  const personsToShow = persons.filter((p) => p.name.startsWith(filterText));
+  const personsToShow = persons.filter((p) =>
+    p.name.toLowerCase().startsWith(filterText.toLowerCase())
+  );
 
   return (
     <div>
+      {errorMessage ? (
+        <Notification message={errorMessage} isError={true} />
+      ) : null}
+      {notification ? <Notification message={notification} /> : null}
+
       <h2>Filter</h2>
       <Filter filterText={filterText} doFilter={doFilter} />
 
@@ -55,7 +94,12 @@ const App = () => {
       />
 
       <h2>Numbers</h2>
-      <Persons persons={personsToShow} />
+      <Persons
+        persons={personsToShow}
+        setPersons={setPersons}
+        successNotification={(msg) => setNotification(msg)}
+        failureNotification={(msg) => setNotification(msg)}
+      />
     </div>
   );
 };
