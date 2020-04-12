@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require("cors");
 const app = express();
 
 let notes = [
@@ -22,8 +23,6 @@ let notes = [
   },
 ];
 
-app.use(express.json());
-
 const requestLogger = (request, response, next) => {
   console.log("Method:", request.method);
   console.log("Path:  ", request.path);
@@ -32,6 +31,8 @@ const requestLogger = (request, response, next) => {
   next();
 };
 
+app.use(cors());
+app.use(express.json());
 app.use(requestLogger);
 
 app.get("/", (req, res) => {
@@ -64,6 +65,14 @@ const generateId = () => {
   const maxId = notes.length > 0 ? Math.max(...notes.map((n) => n.id)) : 0;
   return maxId + 1;
 };
+
+app.put("/api/notes/:id", (request, response) => {
+  const id = Number(request.params.id);
+  const note = request.body;
+  notes = notes.map((n) => (n.id == id ? note : n));
+
+  response.send(note);
+});
 
 app.post("/api/notes", (request, response) => {
   const body = request.body;
